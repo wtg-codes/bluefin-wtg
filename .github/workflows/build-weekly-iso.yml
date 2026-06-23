@@ -12,7 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-iso:
@@ -24,7 +23,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4.1.1
