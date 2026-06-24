@@ -22,7 +22,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v4
