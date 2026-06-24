@@ -19,8 +19,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   lint:
@@ -28,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Lint YAML
-        uses: ibiqlik/action-yamllint@v3.1.1
+        uses: ibiqlik/action-yamllint@v3
         with:
           file_or_dir: .
           config_file: .yamllint.yml
@@ -48,11 +46,11 @@ jobs:
       attestations: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build and Push Custom Image
         id: build
-        uses: blue-build/github-action@v1.8
+        uses: blue-build/github-action@v1
         with:
           recipe: recipe.yml
           cosign_private_key: ${{ secrets.SIGNING_SECRET }}
@@ -74,7 +72,7 @@ jobs:
 
       - name: Attest Build Provenance
         if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@v2.2.0
+        uses: actions/attest@v1
         with:
           subject-name: ghcr.io/${{ github.repository_owner }}/wtgos
           subject-digest: ${{ steps.get-digest.outputs.digest }}
