@@ -16,8 +16,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-live-iso:
@@ -29,10 +27,10 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v4.1.1
+        uses: sigstore/cosign-installer@v4
 
       - name: Verify Image Signature (Zero Trust Gate)
         run: |
@@ -47,7 +45,7 @@ jobs:
           sudo docker image prune --all --force
 
       - name: Build Custom ISO
-        uses: jasonn3/build-container-installer@v1.2.3
+        uses: jasonn3/build-container-installer@v1
         id: build
         with:
           arch: x86_64
