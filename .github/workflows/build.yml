@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
       - name: Lint YAML
         uses: ibiqlik/action-yamllint@v3
         with:
@@ -46,7 +46,7 @@ jobs:
       attestations: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Build and Push Custom Image
         id: build
@@ -72,7 +72,7 @@ jobs:
 
       - name: Attest Build Provenance
         if: github.event_name != 'pull_request'
-        uses: actions/attest@v1
+        uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/${{ github.repository_owner }}/wtgos
           subject-digest: ${{ steps.get-digest.outputs.digest }}
