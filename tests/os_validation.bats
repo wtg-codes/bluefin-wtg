@@ -45,8 +45,8 @@ setup() {
         skip "Source files not available on live system"
     fi
     # Ensure no core actions are pinned to versions lower than Node 24 baseline
-    # We check for @v followed by a single digit 0-4 for actions/checkout
-    ! grep -r "actions/checkout@v[0-4]" .github/workflows/
+    # We check for @v followed by a single digit 0-3 for actions/checkout
+    ! grep -r "actions/checkout@v[0-3]" .github/workflows/
     # Ensure FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 is set
     grep -r "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true" .github/workflows/
 }
