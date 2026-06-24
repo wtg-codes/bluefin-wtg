@@ -14,7 +14,7 @@
     "write-heading-ids": "docusaurus write-heading-ids",
     "typecheck": "tsc",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx,css,json,yml,yaml}\"",
-    "lint": "eslint \"**/*.{js,jsx,ts,tsx}\"",
+    "lint": "eslint --ignore-pattern \"build/**/*\" \"**/*.{js,jsx,ts,tsx}\"",
     "test": "vitest run",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx,css,json,yml,yaml}\""
   },
