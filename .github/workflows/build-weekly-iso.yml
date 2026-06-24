@@ -25,14 +25,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.1.2
 
       - name: Verify Image Signature (Zero Trust Gate)
         run: |
           cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/wtgos:latest
 
       - name: Build Custom ISO
-        uses: jasonn3/build-container-installer@v1
+        uses: jasonn3/build-container-installer@v1.4.0
         id: build
         with:
           arch: x86_64
@@ -58,7 +58,7 @@ jobs:
           iso_name: wtgOS-latest.iso
 
       - name: Publish ISO to Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'   # Only publish when pushing to main
         with:
           tag_name: "weekly-iso"
