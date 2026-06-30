@@ -72,7 +72,7 @@ jobs:
           iso_name: ${{ github.event.inputs.release_version != '' && format('wtgOS-{0}-live.iso', github.event.inputs.release_version) || 'wtgOS-monthly-live.iso' }}
 
       - name: Publish ISO to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: github.ref == 'refs/heads/main'   # Only publish when pushing to main
         with:
           tag_name: ${{ github.event.inputs.release_version || 'monthly-live-iso' }}

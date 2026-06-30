@@ -58,7 +58,7 @@ jobs:
           iso_name: wtgOS-latest.iso
 
       - name: Publish ISO to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: github.ref == 'refs/heads/main'   # Only publish when pushing to main
         with:
           tag_name: "weekly-iso"
