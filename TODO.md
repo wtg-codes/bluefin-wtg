@@ -11,6 +11,7 @@
 - [x] **Replace hardcoded Fedora `version: 41` in ISO workflows:** Added dynamic Fedora major version detection from the built image's `ostree.linux` / `org.opencontainers.image.version` OCI labels via `skopeo inspect` (with safe fallback to `45`).
 - [x] **Add 45-day scheduled workflow keepalive (`.github/workflows/keepalive.yml`):** Added least-privilege scheduled keepalive (`contents: read`, job-scoped `actions: write`) to refresh workflow enablement before GitHub's 60-day `disabled_inactivity` freeze.
 - [x] **Pin GitHub Actions to 40-char commit SHAs & enforce least-privilege `permissions:`:** Pinned all workflow `uses:` references across `.github/workflows/*.yml` to full 40-char commit SHAs and set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true`.
+- [x] **Migrate declarative Distrobox workspace from retired `agv-container` to `agy-box` (`#177`):** Updated `files/usr/share/bluefin-wtg/distrobox.ini` (`[agy-box]`, `image=ghcr.io/wtg-codes/agy-box:latest`, `init=false`, `root=false`), `files/usr/share/ublue-os/just/60-bluefin-wtg.just` (`ujust setup-workspace`), and `tests/os_validation.bats` (replacing obsolete Containerfile stubs with active `agy-box`, `cosign.pub`, `keepalive.yml`, and 40-char SHA workflow-pin assertions).
 - [x] **OSS compliance documentation:** Added root `TODO.md`, `CHANGELOG.md`, and private vulnerability reporting guidance in `SECURITY.md` (preserving existing Apache-2.0 `LICENSE`).
 
 ### Pending Hardware Check (Before Image-Name Alignment)
