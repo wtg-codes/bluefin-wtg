@@ -40,3 +40,14 @@ The following governance rules are enforced by the repository administrator to m
     - [x] Mandatory 2FA for all administrative accounts.
 3.  **Audit Logs:**
     - [x] Weekly review of repository audit logs for suspicious activity.
+
+## Reporting a Vulnerability
+
+Please **do not** report security vulnerabilities through public GitHub issues, discussions, or pull requests.
+
+Instead, report vulnerabilities privately via [GitHub Private Vulnerability Reporting](https://github.com/wtg-codes/bluefin-wtg/security/advisories/new) with:
+
+- A clear description of the issue and affected files, workflow(s), or image digest.
+- Minimal reproduction steps (never include real credentials, signing keys, or private tokens).
+
+Receipt is acknowledged within **5 business days**, and validated fixes are shipped via dedicated security PRs and `CHANGELOG.md` advisories.

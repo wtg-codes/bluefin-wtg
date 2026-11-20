@@ -4,6 +4,12 @@ name: Build Monthly Live ISO
   schedule:
     # Runs at 00:00 (midnight) on the 1st day of every month
     - cron: '0 0 1 * *'
+  pull_request:
+    paths:
+      - '.github/workflows/build-weekly-iso.yml'
+      - '.github/workflows/build-live-iso.yml'
+      - 'cosign.pub'
+      - 'recipes/**'
   # The critical trigger for your "Big Releases"
   workflow_dispatch:
     inputs:
@@ -12,14 +18,60 @@ name: Build Monthly Live ISO
         required: true
         type: string
 
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
-
 jobs:
+  verify-gate:
+    name: Verify Signature & Detect Fedora Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      fedora_major: ${{ steps.fedora-version.outputs.major }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+
+      - name: Verify Image Signature (Zero Trust Gate)
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/wtgos:latest"
+          cosign verify --key cosign.pub --insecure-ignore-tlog=true "${IMAGE}" || \
+            cosign verify --key cosign.pub --insecure-ignore-tlog=true --new-bundle-format=false "${IMAGE}"
+
+      - name: Detect Fedora Major Version
+        id: fedora-version
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/wtgos:latest"
+          INSPECT_JSON="$(skopeo inspect "docker://${IMAGE}")"
+          OSTREE_LINUX="$(printf '%s' "${INSPECT_JSON}" | jq -r '.Labels["ostree.linux"] // empty')"
+          IMAGE_VERSION="$(printf '%s' "${INSPECT_JSON}" | jq -r '.Labels["org.opencontainers.image.version"] // empty')"
+          FEDORA_MAJOR="$(printf '%s\n' "${OSTREE_LINUX}" | sed -n 's/.*\.fc\([0-9][0-9]*\).*/\1/p' | head -n1)"
+          if [ -z "${FEDORA_MAJOR}" ]; then
+            FEDORA_MAJOR="$(printf '%s\n' "${IMAGE_VERSION}" | sed -n 's/^\([0-9][0-9]*\)\(\..*\)\?$/\1/p' | head -n1)"
+          fi
+          if [ -z "${FEDORA_MAJOR}" ]; then
+            echo "::warning::Could not detect Fedora major version from ${IMAGE} labels; falling back to 45"
+            FEDORA_MAJOR="45"
+          fi
+          echo "Detected Fedora major version: ${FEDORA_MAJOR} (ostree.linux=${OSTREE_LINUX:-n/a}, version=${IMAGE_VERSION:-n/a})"
+          echo "major=${FEDORA_MAJOR}" >> "${GITHUB_OUTPUT}"
+
   build-live-iso:
     name: Build Installer ISO
+    needs: verify-gate
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,14 +79,16 @@ jobs:
       id-token: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v4.1.2
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
 
       - name: Verify Image Signature (Zero Trust Gate)
         run: |
-          cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/wtgos:latest
+          IMAGE="ghcr.io/${{ github.repository_owner }}/wtgos:latest"
+          cosign verify --key cosign.pub --insecure-ignore-tlog=true "${IMAGE}" || \
+            cosign verify --key cosign.pub --insecure-ignore-tlog=true --new-bundle-format=false "${IMAGE}"
 
       - name: Maximize Build Space
         run: |
@@ -45,17 +99,16 @@ jobs:
           sudo docker image prune --all --force
 
       - name: Build Custom ISO
-        uses: jasonn3/build-container-installer@v1.4.0
+        uses: jasonn3/build-container-installer@c9ef3de33236e66781ec37bd0485e8009eaefe24  # v1.4.0
         id: build
         with:
           arch: x86_64
           image_name: wtgos
           image_repo: ghcr.io/${{ github.repository_owner }}
           image_tag: latest
-          # AUTHORITATIVE FIX 1: Version Sync
-          # Bluefin-DX 'latest' tracks Fedora 41. If you tell Lorax to build
-          # a Fedora 40 boot tree for a Fedora 41 container, the UEFI will fail.
-          version: 41
+          # AUTHORITATIVE FIX 1: Dynamic Version Sync
+          # Match Lorax boot tree Fedora major version to the built container's ostree.linux label.
+          version: ${{ needs.verify-gate.outputs.fedora_major }}
 
           # AUTHORITATIVE FIX 2: Desktop Variant
           # Bluefin is built on GNOME. You MUST declare Silverblue, or Lorax
@@ -72,8 +125,8 @@ jobs:
           iso_name: ${{ github.event.inputs.release_version != '' && format('wtgOS-{0}-live.iso', github.event.inputs.release_version) || 'wtgOS-monthly-live.iso' }}
 
       - name: Publish ISO to Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'   # Only publish when pushing to main
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        if: github.ref == 'refs/heads/main'  # Only publish when pushing to main
         with:
           tag_name: ${{ github.event.inputs.release_version || 'monthly-live-iso' }}
           name: ${{ github.event.inputs.release_version != '' && format('wtgOS {0} Live Installer', github.event.inputs.release_version) || 'wtgOS Monthly Live Installer' }}

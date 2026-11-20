@@ -1,0 +1,86 @@
+---
+name: Scheduled Workflow Keepalive
+"on":
+  schedule:
+    # Runs twice a month (1st and 16th at 05:00 UTC) and refreshes workflow
+    # activity once commit age reaches >= 45 days so GitHub never freezes
+    # scheduled OS/ISO builds at the 60-day disabled_inactivity threshold.
+    - cron: '0 5 1,16 * *'
+  pull_request:
+    paths:
+      - '.github/workflows/keepalive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  check-keepalive:
+    name: Check Scheduled Workflow Activity (45-Day Threshold)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      needs_refresh: ${{ steps.inspect.outputs.needs_refresh }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - name: Inspect Commit Age & Workflow States
+        id: inspect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THRESHOLD_DAYS: "45"
+        run: |
+          LAST_COMMIT_EPOCH="$(git log -1 --format=%ct)"
+          NOW_EPOCH="$(date -u +%s)"
+          DAYS_SINCE_COMMIT="$(( (NOW_EPOCH - LAST_COMMIT_EPOCH) / 86400 ))"
+          echo "Days since latest commit on ${GITHUB_REF_NAME}: ${DAYS_SINCE_COMMIT} (threshold: ${THRESHOLD_DAYS}d)"
+
+          NEEDS_REFRESH="false"
+          if [ "${DAYS_SINCE_COMMIT}" -ge "${THRESHOLD_DAYS}" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            NEEDS_REFRESH="true"
+          fi
+
+          WORKFLOWS=("build.yml" "build-weekly-iso.yml" "build-live-iso.yml")
+          for wf in "${WORKFLOWS[@]}"; do
+            STATE="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}" --jq '.state')"
+            echo "Workflow ${wf}: state=${STATE}"
+            if [ "${STATE}" != "active" ]; then
+              NEEDS_REFRESH="true"
+            fi
+          done
+
+          echo "needs_refresh=${NEEDS_REFRESH}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Scheduled Workflow Keepalive Check"
+            echo "- Days since latest commit: **${DAYS_SINCE_COMMIT}** (threshold: **${THRESHOLD_DAYS}** days)"
+            echo "- Refresh required: **${NEEDS_REFRESH}**"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  refresh-workflows:
+    name: Refresh Scheduled Workflows Past 45-Day Threshold
+    needs: check-keepalive
+    if: github.event_name != 'pull_request' && needs.check-keepalive.outputs.needs_refresh == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Re-enable Scheduled Workflows via Actions API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WORKFLOWS=("build.yml" "build-weekly-iso.yml" "build-live-iso.yml" "keepalive.yml")
+          for wf in "${WORKFLOWS[@]}"; do
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}/enable"
+            echo "Refreshed workflow enablement timer for ${wf}"
+          done
