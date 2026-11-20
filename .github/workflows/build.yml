@@ -15,25 +15,39 @@ name: bluebuild
       - "**.md"
       - "website/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
-  cancel-in-progress: true
-
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint:
-    name: Lint YAML
+    name: Lint YAML & OS Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
       - name: Lint YAML
-        uses: ibiqlik/action-yamllint@v3
+        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c  # v3
         with:
           file_or_dir: .
           config_file: .yamllint.yml
           strict: true
 
+      - name: Run BATS Static OS Validation
+        run: |
+          if ! command -v bats >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y bats
+          fi
+          bats tests/os_validation.bats
 
   bluebuild:
     name: Build Custom Image
@@ -46,16 +60,17 @@ jobs:
       attestations: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Build and Push Custom Image
         id: build
-        uses: blue-build/github-action@v1
+        uses: blue-build/github-action@fb86c457fd3d0e13d5e9c1875c6305cf28b09234  # v1
         with:
           recipe: recipe.yml
           cosign_private_key: ${{ secrets.SIGNING_SECRET }}
           registry_token: ${{ github.token }}
           pr_event_number: ${{ github.event.number }}
+          push: ${{ github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork }}
           maximize_build_space: true
 
       - name: Fetch Image Digest
@@ -63,16 +78,16 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           IMAGE="ghcr.io/${{ github.repository_owner }}/wtgos:latest"
-          DIGEST=$(skopeo inspect --creds="${{ github.actor }}:${{ github.token }}" docker://$IMAGE | jq -r '.Digest')
-          if [ -z "$DIGEST" ] || [ "$DIGEST" == "null" ]; then
-            echo "Failed to fetch digest for $IMAGE"
+          DIGEST="$(skopeo inspect --creds="${{ github.actor }}:${{ github.token }}" "docker://${IMAGE}" | jq -r '.Digest')"
+          if [ -z "${DIGEST}" ] || [ "${DIGEST}" = "null" ]; then
+            echo "Failed to fetch digest for ${IMAGE}"
             exit 1
           fi
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "digest=${DIGEST}" >> "${GITHUB_OUTPUT}"
 
       - name: Attest Build Provenance
         if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2
         with:
           subject-name: ghcr.io/${{ github.repository_owner }}/wtgos
           subject-digest: ${{ steps.get-digest.outputs.digest }}
