@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532  # v4.1.3
 
       - name: Verify Image Signature (Zero Trust Gate)
         run: |
@@ -77,7 +77,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6  # v4.1.2
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532  # v4.1.3
 
       - name: Verify Image Signature (Zero Trust Gate)
         run: |
