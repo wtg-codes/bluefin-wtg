@@ -94,7 +94,7 @@ jobs:
           sudo docker image prune --all --force
 
       - name: Build Custom ISO
-        uses: jasonn3/build-container-installer@c9ef3de33236e66781ec37bd0485e8009eaefe24  # v1.4.0
+        uses: jasonn3/build-container-installer@bed71f841c250650a70f1ed8315ba92da1591ba6  # v1.5.0
         id: build
         with:
           arch: x86_64
